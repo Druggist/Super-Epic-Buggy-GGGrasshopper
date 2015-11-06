@@ -19,52 +19,56 @@ var FOV = 95;
 window.onload = init();
 
 function getRandomInt(min, max) {
-    return Math.floor(Math.random() * (max - min + 1) + min);
+	return Math.floor(Math.random() * (max - min + 1) + min);
 }
 
 function getRandomGreenColor(){
-    return Math.floor(Math.random()*10);
+	return Math.floor(Math.random()*10);
 }
 
 function generate(blocks) {
-    var block_height = 1;
-    var block_width = 2;
-    var block_depth = 3;
-    var max_distanceY = 2;
-    var min_distanceY = -2;
-    var max_distanceX = 4;
-    var min_distanceX = 2;
-    var max_height =5;
-    var min_height = MIN_HEIGHT;
-    var positionX = 0;
-    var positionY = 0;
-    var green_color = [0x7B7922, 0xCECC15, 0xCDD704, 0xA2BC13, 0x859C27, 0x668014, 0xBEE554, 0xCDAD00, 0x8B7500, 0xAEBB51];
-    cube = [];
-    
-    for (var i = 0; i < blocks; i++) {
-        cube[i] = new Physijs.BoxMesh(
-            new THREE.BoxGeometry( block_width, block_height, block_depth ),
-            new THREE.MeshBasicMaterial( { color: green_color[getRandomGreenColor()],  } ),
-            0
-        );
-        cube[i].position.x= positionX;
-        cube[i].position.y= positionY;
-        scene.add( cube[i] );
-        collidableMeshList.push(cube[i]);
-        
-        positionY += getRandomInt(min_distanceY, max_distanceY);
-        positionX += getRandomInt(min_distanceX, getRandomInt(min_distanceX, max_distanceX));
-        if (positionY<min_height) positionY=min_height;
+	var block_height = 1;
+	var block_width = 2;
+	var block_depth = 3;
+	var max_distanceY = 2;
+	var min_distanceY = -2;
+	var max_distanceX = 4;
+	var min_distanceX = 2;
+	var max_height =5;
+	var min_height = MIN_HEIGHT;
+	var positionX = 0;
+	var positionY = 0;
+	var green_color = [0x7B7922, 0xCECC15, 0xCDD704, 0xA2BC13, 0x859C27, 0x668014, 0xBEE554, 0xCDAD00, 0x8B7500, 0xAEBB51];
+	cube = [];
 
-        if (positionY>max_height) positionY=max_height;
+	for (var i = 0; i < blocks; i++) {
+		cube[i] = new Physijs.BoxMesh(
+			new THREE.BoxGeometry( block_width, block_height, block_depth ),
+			new THREE.MeshBasicMaterial( { color: green_color[getRandomGreenColor()],  } ),
+			0
+		);
+		cube[i].position.x= positionX;
+		cube[i].position.y= positionY;
+		if (i == 0) {
+			cube[i].scale.x = 5;
+			cube[i].position.x += -4;
+		}
+		if (i == blocks - 1) {
+			cube[i].material.color = cube[0].material.color;
+			cube[i].scale.x = 8;
+			cube[i].position.x += 7;
+
+		}
+		scene.add( cube[i] );
+
+		positionY += getRandomInt(min_distanceY, max_distanceY);
+		positionX += getRandomInt(min_distanceX, getRandomInt(min_distanceX, max_distanceX));
+		if (positionY<min_height) positionY=min_height;
+
+		if (positionY>max_height) positionY=max_height;
 		}
 
-    cube[0].scale.x = 5;
-    cube[0].position.x += -4;
-    cube[blocks-1].material.color = cube[0].material.color;
-    cube[blocks-1].scale.x = 8;
-    cube[blocks-1].position.x += 7;    
-    return 0;
+	return 0;
 }
 
 function init() {
@@ -72,11 +76,11 @@ function init() {
 	clock = new THREE.Clock();
 	// RENDERER
 	if ( Detector.webgl )
-		renderer = new THREE.WebGLRenderer( {antialias:true} );
+		renderer = new THREE.WebGLRenderer( {antialias:true, alpha:true} );
 	else
 		renderer = new THREE.CanvasRenderer();
 	renderer.setSize( window.innerWidth, window.innerHeight );
-	//renderer.setClearColor( 0xffffff, 0);
+	renderer.setClearColor( 0xffffff, 0);
 
 
 	document.body.appendChild( renderer.domElement );
@@ -110,10 +114,10 @@ function init() {
 	camera.rotation.x = -0.5;
 	// KEYBOARD
 	keyboard = new THREEx.KeyboardState();
-    //LIGHT
-    var light = new THREE.AmbientLight( 0xf0f0f0 ); // soft white light
+	//LIGHT
+	var light = new THREE.AmbientLight( 0xf0f0f0 ); // soft white light
 scene.add( light );
-    var directionalLight = new THREE.DirectionalLight( 0xffffff, 0.5 );
+	var directionalLight = new THREE.DirectionalLight( 0xffffff, 0.5 );
 directionalLight.position.set( 0, 1, 0 );
 scene.add( directionalLight );
 	//END setup
@@ -132,7 +136,6 @@ scene.add( directionalLight );
 			this.applyCentralImpulse(new THREE.Vector3(0,force,0));
 			this.setAngularVelocity(new THREE.Vector3( 0, 0, 0 ))
 			this.isJumping = false;
-			console.log(force);
 	});
 	player.position.y = PLAYER_OFFSET;
 	player.isJumping = false;
@@ -150,7 +153,7 @@ function render() {
 
 	requestAnimationFrame( render );
 	if (player.position.y < -1) {
-		console.log("dead");
+		player.setLinearVelocity(new THREE.Vector3(0,0,0))
 		player.position.y = PLAYER_OFFSET;
 		player.position.x = 0;
 		player.__dirtyPosition = true;
@@ -159,23 +162,19 @@ function render() {
 	delta = clock.getDelta();
 	v = player.getLinearVelocity();
 	if(keyboard.pressed("A")) {
-		v.x -= MOVE_SPEED * delta;
-		if(Math.abs(v.x) > MAX_VELOCITY) v.x = -MAX_VELOCITY;
+		if(Math.abs(v.x) < MAX_VELOCITY) player.applyCentralImpulse(new THREE.Vector3(-MOVE_SPEED * delta,0,0));
 	} else if (keyboard.pressed("D")) {
-		v.x += MOVE_SPEED * delta;
-		if(Math.abs(v.x) > MAX_VELOCITY) v.x = MAX_VELOCITY;
+		if(Math.abs(v.x) < MAX_VELOCITY) player.applyCentralImpulse(new THREE.Vector3(MOVE_SPEED * delta,0,0));
 	} else {
 		if(v.x>0){
-				v.x -= (v.x<MOVE_SPEED)?v.x:MOVE_SPEED * delta;
+				player.applyCentralImpulse(new THREE.Vector3(-MOVE_SPEED * delta,0,0));
 			} else {
-				v.x += (Math.abs(v.x)<MOVE_SPEED)?-v.x:MOVE_SPEED * delta;
-			}
+				player.applyCentralImpulse(new THREE.Vector3(MOVE_SPEED * delta,0,0))
+		}
 	}
 	if (keyboard.pressed("w")) {
 		player.isJumping = true;
-		console.log("jump");
 	}
-	player.setLinearVelocity(v);
 	camera.position.x = player.position.x;
 
 	renderer.autoClear = false;
