@@ -8,18 +8,42 @@
 			background-image: url(images/bg2.png);
 			background-size: cover;
 		}
+		
+		.container{
+			height: 100%;
+			width: 100%;
+			background-color: rgba(0,0,0,.7);
+			position: absolute;
+			top: 0;
+			text-align: center;
+		}
+		
+		img{
+			max-height: 100%;
+			max-width: 100%;
+		}
+		
+		.hidden{
+			visibility: hidden;
+		}
 	</style>
   </head>
   <body>
+	<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
 	<script src="js/three.js"></script>
 	<script src="js/Detector.js"></script>
 	<script src="js/stats.min.js"></script>
-	<script src="js/OrbitControls.js"></script>
 	<script src="js/THREEx.KeyboardState.js"></script>
 	<script src="js/THREEx.FullScreen.js"></script>
 	<script src="js/THREEx.WindowResize.js"></script>
 
 	<script src="js/physi.js"></script>
 	<script src="js/main.js"></script>
+	 <div class="container victory hidden">
+	 	 	<img src="images/victory.png" alt="victory">
+	 </div>
+	  <div class="container defeat hidden">
+	 	 	<img src="images/defeat.png" alt="defeat">
+	 </div>
   </body>
 </html>
