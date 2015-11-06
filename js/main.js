@@ -11,67 +11,54 @@ var MAX_VELOCITY = 30;
 var VERTICES = 8;
 var LOW_VERTICES = 2;
 
-var bg = new THREE.Mesh(
-  new THREE.PlaneGeometry(2, 2, 0),
-  new THREE.MeshBasicMaterial({map: THREE.ImageUtils.loadTexture('images/bg.jpg')})
-);
-
-// The bg plane shouldn't care about the z-buffer.
-bg.material.depthTest = false;
-bg.material.depthWrite = false;
-
-var bgScene = new THREE.Scene();
-var bgCam = new THREE.Camera();
-bgScene.add(bgCam);
-bgScene.add(bg);
-
-
 init();
 animate();
 
 function getRandomInt(min, max) {
-	return Math.floor(Math.random() * (max - min + 1)) + min;
+    return Math.floor(Math.random() * (max - min + 1) + min);
+}
+
+function getRandomGreenColor(){
+    return Math.floor(Math.random()*10);
 }
 
 function generate(blocks) {
-		var block_height = 1;
-		var block_width = 2;
-		var block_depth = 3;
-		var max_distanceY = 2;
-		var min_distanceY = -2;
-		var max_distanceX = 4;
-		var min_distanceX = 2;
-		var max_height =5;
-		var min_height =-1;
-		var positionX = 0;
-		var positionY = 0;
+    var block_height = 1;
+    var block_width = 2;
+    var block_depth = 3;
+    var max_distanceY = 2;
+    var min_distanceY = -2;
+    var max_distanceX = 4;
+    var min_distanceX = 2;
+    var max_height =5;
+    var min_height =-1;
+    var positionX = 0;
+    var positionY = 0;
+    var green_color = [0x7B7922, 0xCECC15, 0xCDD704, 0xA2BC13, 0x859C27, 0x668014, 0xBEE554, 0xCDAD00, 0x8B7500, 0xAEBB51];
+    cube = [];
+    
+    for (var i = 0; i < blocks; i++) {
+        var geometry = new THREE.CubeGeometry( block_width, block_height, block_depth, LOW_VERTICES, LOW_VERTICES, LOW_VERTICES );
+        var material = new THREE.MeshLambertMaterial( { color: green_color[getRandomGreenColor()],  } );
+        cube[i] = new THREE.Mesh( geometry, material );
+        cube[i].position.x= positionX;
+        cube[i].position.y= positionY;
+        scene.add( cube[i] );
+        collidableMeshList.push(cube[i]);
+        
+        positionY += getRandomInt(min_distanceY, max_distanceY);
+        positionX += getRandomInt(min_distanceX, getRandomInt(min_distanceX, max_distanceX));
+        if (positionY<min_height) positionY=min_height;
 
-		cube = [];
+        if (positionY>max_height) positionY=max_height;
+		}
 
-		for (var i = 0; i < blocks; i++) {
-			var geometry = new THREE.CubeGeometry( block_width, block_height, block_depth, LOW_VERTICES, LOW_VERTICES, LOW_VERTICES );
-			var material = new THREE.MeshBasicMaterial( { color: 0xB88A00,  } );
-			cube[i] = new THREE.Mesh( geometry, material );
-			cube[i].position.x= positionX;
-			cube[i].position.y= positionY;
-			scene.add( cube[i] );
-			collidableMeshList.push(cube[i]);
-
-			positionY += getRandomInt(min_distanceY, max_distanceY);
-			positionX += getRandomInt(min_distanceX, getRandomInt(min_distanceX, max_distanceX));
-			if (positionY<min_height) {
-					positionY=min_height;
-			};
-					if (positionY>max_height) {
-					positionY=max_height;
-			};
-		};
-
-		cube[0].material.color.setHex( 0xff0000 );
-		cube[blocks-1].material.color.setHex( 0x00ff03 );
-
-
-return 0;
+    cube[0].scale.x = 5;
+    cube[0].position.x += -4;
+    cube[blocks-1].material.color = cube[0].material.color;
+    cube[blocks-1].scale.x = 8;
+    cube[blocks-1].position.x += 7;    
+    return 0;
 }
 
 function init() {
@@ -80,7 +67,7 @@ function init() {
 	// SCENE
 	scene = new THREE.Scene();
 	// CAMERA
-	camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 1, 10000 );
+	camera = new THREE.PerspectiveCamera( 95, window.innerWidth / window.innerHeight, 1, 10000 );
 	//camera.position.y = -800;
 	//camera.position.z = 500;
 	camera.position.z = 4;
@@ -88,11 +75,18 @@ function init() {
 	camera.rotation.x = -0.5;
 	// KEYBOARD
 	keyboard = new THREEx.KeyboardState();
-
+    //LIGHT
+    var light = new THREE.AmbientLight( 0xf0f0f0 ); // soft white light
+scene.add( light );
+    var directionalLight = new THREE.DirectionalLight( 0xffffff, 0.5 );
+directionalLight.position.set( 0, 1, 0 );
+scene.add( directionalLight );
 	//END setup
+
+    
 	// PLAYER
 	geometry = new THREE.CubeGeometry( 1, 1, 1, VERTICES, VERTICES, VERTICES );
-	material = new THREE.MeshBasicMaterial( { color: 0x8AB800 } );
+	material = new THREE.MeshPhongMaterial( { color: 0x8AB800 } );
 
 	player = new THREE.Mesh( geometry, material );
 	player.offset = 1;
@@ -108,12 +102,13 @@ function init() {
 	generate(LVL_LENGHT);
 
 	// RENDERER
-	if ( Detector.webgl )
-		renderer = new THREE.WebGLRenderer( {antialias:true} );
+	if ( Detector.webgl ){
+		renderer = new THREE.WebGLRenderer( {antialias:true,alpha:true} );
+    }
 	else
 		renderer = new THREE.CanvasRenderer();
 	renderer.setSize( window.innerWidth, window.innerHeight );
-	//renderer.setClearColor( 0xffffff, 0);
+	renderer.setClearColor( 0x000000, 0);
 
 
 	document.body.appendChild( renderer.domElement );
@@ -123,7 +118,7 @@ function animate() {
 
 	requestAnimationFrame( animate );
 	delta = clock.getDelta();
-	//camera.position.x += 0.01;
+	camera.position.x += 0.01;
 	if(keyboard.pressed("A")) {
 		if(Math.abs(player.velocityX) < MAX_VELOCITY) player.velocityX -= MOVE_SPEED * delta;
 		if(Math.abs(player.velocityX) > MAX_VELOCITY) player.velocityX = -MAX_VELOCITY;
@@ -156,10 +151,7 @@ function animate() {
 
 	renderer.autoClear = false;
 renderer.clear();
-renderer.render(bgScene, bgCam);
-	
 	renderer.render( scene, camera );
-
 }
 
 function getCollision(collisionObject){
