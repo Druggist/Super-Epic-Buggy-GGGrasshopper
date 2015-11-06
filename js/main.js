@@ -5,7 +5,7 @@ var cube, player, death_plane;
 Physijs.scripts.worker = 'js/physijs_worker.js';
 Physijs.scripts.ammo = 'ammo.js';
 
-var DEBUG = true;
+var DEBUG = false;
 var MOVE_SPEED = 10;
 var JUMP_HEIGHT = 5;
 var BOUNCE_HEIGHT = 3;
@@ -89,6 +89,7 @@ function init() {
 
 	document.body.appendChild( renderer.domElement );
 	// STATS
+	if(DEBUG){
 	render_stats = new Stats();
 		render_stats.domElement.style.position = 'absolute';
 		render_stats.domElement.style.top = '1px';
@@ -99,7 +100,7 @@ function init() {
 		physics_stats.domElement.style.top = '50px';
 		physics_stats.domElement.style.zIndex = 100;
 		document.body.appendChild( physics_stats.domElement );
-
+	}
 	// SCENE
 	scene = new Physijs.Scene();
 	scene.setGravity(new THREE.Vector3( 0, -GRAVITY, 0 ));
