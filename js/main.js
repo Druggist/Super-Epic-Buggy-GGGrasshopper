@@ -1,5 +1,5 @@
 var scene, camera, renderer, keyboard, clock;
-var cube, player, death_plane;
+var cubes, player, death_plane;
 
 // Setup PhysiJS
 Physijs.scripts.worker = 'js/physijs_worker.js';
@@ -7,14 +7,16 @@ Physijs.scripts.ammo = 'ammo.js';
 
 var DEBUG = false;
 var MOVE_SPEED = 10;
-var JUMP_HEIGHT = 5;
-var BOUNCE_HEIGHT = 3;
+var MIN_JUMP_HEIGHT = 5;
+var MAX_JUMP_HEIGHT = 10;
+var JUMP_RATE = 5;
+var BOUNCE_HEIGHT = 2;
 var LVL_LENGTH = 50;
 var MAX_VELOCITY = 30;
 var MIN_HEIGHT = -1;
-var PLAYER_OFFSET = 1;
+var PLAYER_OFFSET = 3;
 var GRAVITY = 10;
-var FOV = 100;
+var FOV = 95;
 var VICTORY = false;
 var PAUSE = false;
 
@@ -35,38 +37,39 @@ function generate(blocks) {
 	var block_depth = 3;
 	var max_distanceY = 2;
 	var min_distanceY = -2;
-	var max_distanceX = 8;
-	var min_distanceX = 2;
+	var max_distanceX = 6;
+	var min_distanceX = 20;
 	var max_height =5;
 	var min_height = MIN_HEIGHT;
-	var positionX = 4;
+	var positionX = 15;
 	var positionY = 0;
 	var green_color = [0x7B7922, 0xCECC15, 0xCDD704, 0xA2BC13, 0x859C27, 0x668014, 0xBEE554, 0xCDAD00, 0x8B7500, 0xAEBB51];
-	cube = [];
+	cubes = [];
 
 	for (var i = 0; i < blocks; i++) {
 			var width =  getRandomInt(block_min_width, block_max_width);
-		cube[i] = new Physijs.BoxMesh(
+		cubes[i] = new Physijs.BoxMesh(
 			new THREE.BoxGeometry(width, block_height, block_depth ),
 			new THREE.MeshLambertMaterial( { color: green_color[getRandomGreenColor()],  } ),
 			0
 		);
-		cube[i].position.x= positionX;
-		cube[i].position.y= positionY;
+		cubes[i].position.x= positionX;
+		cubes[i].position.y= positionY;
 		if (i == 0) {
-			cube[i].scale.x = 20.0/width;
-			cube[i].position.x -= 9;
+			cubes[i].scale.x = 20.0/width;
+			cubes[i].position.x -= 9;
 		}
 		if (i == blocks - 1) {
-			cube[i].material.color = cube[0].material.color;
-			cube[i].scale.x = 20.0/width;
-			cube[i].position.x += 9;
+			cubes[i].material.color = cubes[0].material.color;
+			cubes[i].scale.x = 20.0/width;
+			cubes[i].position.x += 9;
 
 		}
-		scene.add( cube[i] );
+		scene.add( cubes[i] );
 
 		positionY += getRandomInt(min_distanceY, max_distanceY);
-		positionX += getRandomInt(min_distanceX, getRandomInt(min_distanceX, max_distanceX));
+        min_distanceX = getRandomInt(width, max_distanceX);
+		positionX += min_distanceX;
 		if (positionY<min_height) positionY=min_height;
 
 		if (positionY>max_height) positionY=max_height;
@@ -110,7 +113,7 @@ function init() {
 			player.setAngularVelocity(new THREE.Vector3(0,0,0));
 			if(!PAUSE)
 				scene.simulate( undefined, 1 );
-			physics_stats.update();
+			if(DEBUG) physics_stats.update();
 		}
 	);
 	// CAMERA
@@ -131,20 +134,21 @@ scene.add( directionalLight );
 	// death_plane = new Physijs.PlaneMesh()
 	// PLAYER
 	player = new Physijs.BoxMesh(
-		new THREE.BoxGeometry( 1, 1, 1 ),
+		new THREE.BoxGeometry(1, 1, 1),
 		new THREE.MeshPhongMaterial( { color: 0x8AB800 } )
 	);
 	player.addEventListener( 'collision', function(collidingObject) {
-			if(collidingObject == cube[LVL_LENGTH-1]){
+			if(collidingObject == cubes[LVL_LENGTH-1]){
 				$(".victory").removeClass("hidden");
 				VICTORY = true;
 				PAUSE = true;
 			}
 			
 			force = BOUNCE_HEIGHT;
-			if (this.isJumping) {
-				force += JUMP_HEIGHT;
-			}
+            if(player.isJumping){
+                force += player.jumpForce;
+                player.jumpForce = MIN_JUMP_HEIGHT;
+            }
 			this.applyCentralImpulse(new THREE.Vector3(0,force,0));
 			this.setAngularVelocity(new THREE.Vector3( 0, 0, 0 ))
 			this.isJumping = false;
@@ -177,38 +181,50 @@ function render() {
 
 	delta = clock.getDelta();
 	v = player.getLinearVelocity();
-	if(keyboard.pressed("a") || keyboard.pressed("left")) {
-		if(Math.abs(v.x) < MAX_VELOCITY) player.applyCentralImpulse(new THREE.Vector3(-MOVE_SPEED * delta,0,0));
-	} else if (keyboard.pressed("d") || keyboard.pressed("right")) {
-		if(Math.abs(v.x) < MAX_VELOCITY) player.applyCentralImpulse(new THREE.Vector3(MOVE_SPEED * delta,0,0));
-	} else {
-		if(v.x>0){
-				player.applyCentralImpulse(new THREE.Vector3(-MOVE_SPEED * delta,0,0));
-			} else {
-				player.applyCentralImpulse(new THREE.Vector3(MOVE_SPEED * delta,0,0))
-		}
-	}
-	if (keyboard.pressed("w") || keyboard.pressed("up") || keyboard.pressed("space")) {
-		player.isJumping = true;
-	}
+	if (!keyboard.pressed("w") && !keyboard.pressed("up") && !keyboard.pressed("space")) {
+        if(player.jumpForce != MIN_JUMP_HEIGHT) player.isJumping = true;
+        if(keyboard.pressed("a") || keyboard.pressed("left")) {
+		  if(Math.abs(v.x) < MAX_VELOCITY) player.applyCentralImpulse(new THREE.Vector3(-MOVE_SPEED * delta,0,0));
+        } else if (keyboard.pressed("d") || keyboard.pressed("right")) {
+            if(Math.abs(v.x) < MAX_VELOCITY) player.applyCentralImpulse(new THREE.Vector3(MOVE_SPEED * delta,0,0));
+        } else {
+            if(v.x>0){
+                player.applyCentralImpulse(new THREE.Vector3(-MOVE_SPEED * delta,0,0));
+            } else {
+                player.applyCentralImpulse(new THREE.Vector3(MOVE_SPEED * delta,0,0))
+            }
+        }
+    }else {
+        if(player.jumpForce < MAX_JUMP_HEIGHT){
+            player.jumpForce += JUMP_RATE * delta;
+        }
+        
+        player.isJumping = false;
+        if(v.x>0){
+                player.applyCentralImpulse(new THREE.Vector3(-MOVE_SPEED * delta,0,0));
+            } else {
+                player.applyCentralImpulse(new THREE.Vector3(MOVE_SPEED * delta,0,0))
+            }
+    }
 	camera.position.x = player.position.x;
 
 	renderer.autoClear = false;
 	renderer.clear();
 	renderer.render( scene, camera );
-	render_stats.update();
+	if(DEBUG) render_stats.update();
 }
 
 function reset(FullReset) {
 	if(FullReset){
-		for(var i=0; i<LVL_LENGTH;i++)	scene.remove(cube[i]);
-		cube = null;
+		for(var i=0; i<LVL_LENGTH;i++)	scene.remove(cubes[i]);
+		cubes = null;
 		generate(LVL_LENGTH);
 	}
 	player.setLinearVelocity(new THREE.Vector3(0,0,0));
-	player.position.y = PLAYER_OFFSET;
-	player.position.x = 0;
+	player.position.set(0,PLAYER_OFFSET,0);
 	player.__dirtyPosition = true;
+	player.rotation.set(0,0,0);
+	player.__dirtyRotation = true;
 	$(".defeat").addClass("hidden");
 	$(".victory").addClass("hidden");
 	VICTORY = false;
