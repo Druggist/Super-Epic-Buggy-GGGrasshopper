@@ -1,0 +1,8 @@
+*.sublime-*
+*.pyc
+*.swp
+*.mo
+*.log
+node_modules/
+static/css/*
+static/js/*.min.js
