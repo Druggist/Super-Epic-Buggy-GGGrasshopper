@@ -6,14 +6,16 @@ Physijs.scripts.worker = 'static/js/physijs_worker.js';
 Physijs.scripts.ammo = 'ammo.js';
 
 var DEBUG = false;
-var MOVE_SPEED = 10;
-var MIN_JUMP_HEIGHT = 5;
-var MAX_JUMP_HEIGHT = 10;
+var MOVE_SPEED = 8;
+var MIN_JUMP_HEIGHT = 4;
+var MAX_JUMP_HEIGHT = 5;
+var JUMPS = 1;
+var JUMPS_LEFT=JUMPS;
 var JUMP_RATE = 5;
 var BOUNCE_HEIGHT = 2;
-var LVL_LENGTH = 50;
+var LVL_LENGTH = 75;
 var MAX_VELOCITY = 30;
-var MIN_HEIGHT = -1;
+var MIN_HEIGHT = -3;
 var PLAYER_OFFSET = 3;
 var GRAVITY = 10;
 var FOV = 95;
@@ -33,10 +35,10 @@ function generate(blocks) {
 	var block_min_width = 1;
 	var block_max_width = 3;
 	var block_depth = 3;
-	var max_distanceY = 2;
-	var min_distanceY = -2;
+	var max_distanceY = 3;
+	var min_distanceY = -3;
 	var max_distanceX = 6;
-	var min_distanceX = 20;
+	var min_distanceX = 30;
 	var max_height =5;
 	var min_height = MIN_HEIGHT;
 	var positionX = 15;
@@ -142,15 +144,9 @@ scene.add( directionalLight );
 				PAUSE = true;
 			}
 			play(sounds.collision);
-			force = BOUNCE_HEIGHT;
-            if(player.isJumping){
-            	play(sounds.jump);
-                force += player.jumpForce;
-                player.jumpForce = MIN_JUMP_HEIGHT;
-            }
-			this.applyCentralImpulse(new THREE.Vector3(0,force,0));
-			this.setAngularVelocity(new THREE.Vector3( 0, 0, 0 ))
+			JUMPS_LEFT=JUMPS;
 			this.isJumping = false;
+			this.applyCentralImpulse(new THREE.Vector3(0,BOUNCE_HEIGHT,0));
 	});
 	player.position.y = PLAYER_OFFSET;
 	player.isJumping = false;
@@ -163,10 +159,19 @@ scene.add( directionalLight );
 	requestAnimationFrame( render );
 	scene.simulate();
 }
-
+function jump() {
+	force = BOUNCE_HEIGHT;
+    if(player.isJumping && JUMPS_LEFT>0){
+       	play(sounds.jump);
+        force += player.jumpForce;
+        player.jumpForce = MIN_JUMP_HEIGHT;
+        JUMPS_LEFT--;
+		player.applyCentralImpulse(new THREE.Vector3(0,force,0));
+    }
+}
 function render() {
 	requestAnimationFrame( render );
-	if (player.position.y < -2) {
+	if (player.position.y < MIN_HEIGHT-2) {
 		$(".defeat").removeClass("hidden");
 		if(keyboard.pressed("r"))
 		reset(false);
@@ -180,8 +185,13 @@ function render() {
 
 	delta = clock.getDelta();
 	v = player.getLinearVelocity();
+
+	player.setAngularVelocity(new THREE.Vector3( 0, 0, 0 ));
 	if (!keyboard.pressed("w") && !keyboard.pressed("up") && !keyboard.pressed("space")) {
-        if(player.jumpForce != MIN_JUMP_HEIGHT) player.isJumping = true;
+        if(player.jumpForce != MIN_JUMP_HEIGHT && player.isJumping == false) {
+        	player.isJumping = true;
+        	jump();
+        }
         if(keyboard.pressed("a") || keyboard.pressed("left")) {
 		  if(Math.abs(v.x) < MAX_VELOCITY) player.applyCentralImpulse(new THREE.Vector3(-MOVE_SPEED * delta,0,0));
         } else if (keyboard.pressed("d") || keyboard.pressed("right")) {
